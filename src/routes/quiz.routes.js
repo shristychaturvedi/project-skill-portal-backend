@@ -9,9 +9,9 @@ import { authenticate } from "../middlewares/auth.middleware.js";
 
 const router = express.Router();
 
-router.post("/start", authenticate, startQuiz);
+router.get("/start/:skill_id", authenticate, startQuiz);
 router.post("/submit", authenticate, submitQuiz);
-router.get("/my", authenticate, getMyAttempts);
-router.get("/:id", authenticate, getAttemptDetails);
+router.get("/attempts", authenticate, getMyAttempts);
+router.get("/attempt/:id", authenticate, getAttemptDetails);
 
 export default router;

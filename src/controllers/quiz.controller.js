@@ -4,7 +4,7 @@ import logger from "../config/logger.js";
 
 export const startQuiz = async (req, res) => {
     try {
-        const { skill_id } = req.body;
+        const { skill_id } = req.params;
         const userId = req.user.id;
 
         const [questions] = await db.query(
@@ -22,7 +22,7 @@ export const startQuiz = async (req, res) => {
             questions.length
         );
 
-        res.json({ attempt_id: attemptId, questions });
+        res.json({ attemptId, questions });
     } catch (err) {
         logger.error("Start quiz error:", err);
         res.status(500).json({ message: "Failed to start quiz" });
@@ -31,41 +31,19 @@ export const startQuiz = async (req, res) => {
 
 export const submitQuiz = async (req, res) => {
     try {
-        const { attempt_id, answers } = req.body;
+        const { attemptId, answers } = req.body;
 
-        if (!answers || !Array.isArray(answers))
+        if (!answers || !Array.isArray(answers)) {
             return res.status(400).json({ message: "Invalid answers format" });
+        }
 
-        const [correctAnswers] = await db.query(
-            `SELECT id, correct_option FROM questions WHERE id IN (${answers.map(a => a.question_id).join(",")})`
-        );
-
-        const answerMap = Object.fromEntries(
-            correctAnswers.map(q => [q.id, q.correct_option])
-        );
-
-        let score = 0;
-
-        const processedAnswers = answers.map(a => {
-            const isCorrect = a.selected_option === answerMap[a.question_id];
-            if (isCorrect) score++;
-            return { ...a, is_correct: isCorrect };
-        });
-
-        await QuizModel.saveAnswers(attempt_id, processedAnswers);
-        await QuizModel.updateAttemptResult(
-            attempt_id,
-            score,
-            processedAnswers.length
-        );
+        const score = await QuizModel.submitQuiz(attemptId, answers);
 
         res.json({
             message: "Quiz submitted successfully",
-            score,
-            total: processedAnswers.length
+            score
         });
     } catch (err) {
-        logger.error("Submit quiz error:", err);
         res.status(500).json({ message: "Failed to submit quiz" });
     }
 };
